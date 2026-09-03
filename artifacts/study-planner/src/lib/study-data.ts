@@ -95,8 +95,10 @@ export function createDemoState(): PlannerState {
   };
   let allTasks = generatePlan(exam, 'demo-task');
   if (!allTasks.some(task => task.date === today)) {
-    let moved = 0;
-    allTasks = allTasks.map(task => task.date > today && moved < 2 ? { ...task, date: today } : task);
+    const hasFuture = allTasks.some(task => task.date > today);
+    const candidates = allTasks.filter(task => hasFuture ? task.date > today : task.date < today);
+    const demoTodayIds = new Set(candidates.slice(hasFuture ? 0 : -2).map(task => task.id));
+    allTasks = allTasks.map(task => demoTodayIds.has(task.id) ? { ...task, date: today } : task);
   }
   const tasks = allTasks.map((task, index) => {
     if (task.date < today) {
@@ -110,4 +112,4 @@ export function createDemoState(): PlannerState {
   return { exams: [exam], tasks, checkIns, seeded: true, preferences: { name: 'Maya Chen', email: 'maya.chen@campus.edu', weekStartsOn: 'monday', reminderTime: '18:30', compactMode: false } };
 }
 
-export const STORAGE_KEY = 'study-planner-local-v2';
+export const STORAGE_KEY = 'study-planner-local-v3';
