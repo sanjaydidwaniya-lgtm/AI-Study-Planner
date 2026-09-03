@@ -1,6 +1,6 @@
-# [Project name]
+# Morrow Study Planner
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Morrow is a responsive, local-first study planner for turning exam syllabi into daily sessions and measurable progress.
 
 ## Run & Operate
 
@@ -22,15 +22,22 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/study-planner/src/lib/study-data.ts` — planner domain types, demo data, date helpers, and deterministic schedule generation
+- `artifacts/study-planner/src/hooks/use-study-planner.tsx` — localStorage-backed planner context and task/check-in mutations
+- `artifacts/study-planner/src/components/` — reusable shell, task, progress, calendar, and check-in UI
+- `artifacts/study-planner/src/pages/` — auth, dashboard, today, study plan, calendar, analytics, and settings views
+- `artifacts/study-planner/src/index.css` — shared visual tokens and responsive styling
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The first MVP is local-first: planner state is persisted in browser localStorage and seeded with a realistic exam workspace.
+- Tasks are immutable once a date is checked in; rescheduling creates a new pending task and preserves the historical record.
+- The study plan is generated from a flat manual syllabus format that preserves subject, chapter, and topic hierarchy for a future API migration.
+- UI state is kept behind a planner context so the storage implementation can later move to PostgreSQL/Supabase without rewriting page components.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Users can create exams, enter syllabus topics, generate a daily plan, record YES/NO/PARTIAL outcomes, lock daily check-ins, reschedule misses without rewriting history, and review progress across dashboard, calendar, and analytics views.
 
 ## User preferences
 
