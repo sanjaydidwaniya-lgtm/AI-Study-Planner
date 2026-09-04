@@ -1,18 +1,42 @@
-import { BookOpen, CalendarDays, ChartNoAxesCombined, ClipboardList, LayoutDashboard, LogOut, Menu, Settings, Sparkles, X } from 'lucide-react';
+import { LogOut, Menu, Settings, Sparkles, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { usePlanner } from '@/hooks/use-study-planner';
+import { Navigation } from '@/components/Navigation';
 
-const nav = [
-  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-  { href: '/today', label: 'Today', icon: ClipboardList },
-  { href: '/study-plan', label: 'Study plan', icon: BookOpen },
-  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { href: '/analytics', label: 'Analytics', icon: ChartNoAxesCombined },
-];
 export function AppShell({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { preferences } = usePlanner();
- return <div className="grain flex min-h-[100dvh] bg-background"><aside className={`fixed inset-y-0 left-0 z-30 flex w-[248px] flex-col border-r border-sidebar-border bg-sidebar px-4 py-5 text-sidebar-foreground transition-transform md:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}><div className="flex items-center justify-between px-3"><Link href="/dashboard" className="flex items-center gap-2.5" data-testid="link-brand"><span className="grid h-9 w-9 place-items-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground"><Sparkles size={18} /></span><span className="font-display text-xl">morrow</span></Link><button className="rounded-lg p-1 md:hidden" onClick={() => setMobileOpen(false)} data-testid="button-close-menu"><X size={17} /></button></div><div className="mt-10 px-3 text-[10px] font-semibold uppercase tracking-[.18em] text-sidebar-foreground/45">Your study space</div><nav className="mt-3 space-y-1">{nav.map(item => { const active = location === item.href; const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/68 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground'}`} data-testid={`link-nav-${item.label.toLowerCase().replace(' ', '-')}`}><Icon size={17} strokeWidth={active ? 2.2 : 1.7} /><span>{item.label}</span>{item.label === 'Today' && <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-bold text-sidebar-primary-foreground">2</span>}</Link>})}</nav><div className="mt-auto space-y-1"><Link href="/settings" onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${location === '/settings' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/68 hover:bg-sidebar-accent'}`} data-testid="link-nav-settings"><Settings size={17} />Settings</Link><div className="mt-4 flex items-center gap-3 border-t border-sidebar-border px-3 pt-4"><div className="grid h-8 w-8 place-items-center rounded-full bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">{preferences.name.split(' ').map(part => part[0]).join('')}</div><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{preferences.name}</p><p className="truncate text-[10px] text-sidebar-foreground/45">Local workspace</p></div><button type="button" onClick={() => setLocation('/login')} className="text-sidebar-foreground/45 hover:text-sidebar-foreground" data-testid="button-log-out"><LogOut size={15} /></button></div></div></aside><div className="flex min-w-0 flex-1 flex-col md:pl-[248px]"><header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background/90 px-5 backdrop-blur-md md:px-10"><button type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 hover:bg-secondary md:hidden" data-testid="button-open-menu"><Menu size={20} /></button><div className="hidden text-xs text-muted-foreground md:block">Personal workspace <span className="mx-2 text-border">/</span> {nav.find(item => item.href === location)?.label ?? (location === '/' ? 'Overview' : 'Settings')}</div><div className="ml-auto flex items-center gap-3"><span className="hidden text-xs text-muted-foreground sm:inline">All changes saved locally</span><span className="h-2 w-2 rounded-full bg-[#397c68]" title="Local storage active" /></div></header><main className="page-enter mx-auto w-full max-w-[1440px] flex-1 px-5 py-7 pb-24 md:px-10 md:py-10 md:pb-12">{children}</main><nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t bg-card/95 px-2 py-2 backdrop-blur-md md:hidden">{nav.slice(0, 5).map(item => { const active = location === item.href; const Icon = item.icon; return <Link key={item.href} href={item.href} className={`flex flex-col items-center gap-1 px-3 py-1 text-[10px] ${active ? 'text-primary' : 'text-muted-foreground'}`} data-testid={`mobile-nav-${item.label.toLowerCase().replace(' ', '-')}`}><Icon size={17} /><span>{item.label}</span></Link>})}</nav></div></div>;
+  const initials = preferences.name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase();
+  return <div className="grain flex min-h-[100dvh] bg-background">
+    <aside className={`fixed inset-y-0 left-0 z-30 flex w-[248px] flex-col border-r border-sidebar-border bg-sidebar px-4 py-5 text-sidebar-foreground transition-transform md:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className="flex items-center justify-between px-3">
+        <Link href="/welcome" className="flex items-center gap-2.5" data-testid="link-brand">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground"><Sparkles size={18} /></span>
+          <span className="font-display text-xl">AI Study Planner</span>
+        </Link>
+        <button className="rounded-lg p-1 md:hidden" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X size={17} /></button>
+      </div>
+      <div className="mt-10 px-3 text-[10px] font-semibold uppercase tracking-[.18em] text-sidebar-foreground/45">Your study space</div>
+      <div className="mt-3"><Navigation onNavigate={() => setMobileOpen(false)} /></div>
+      <div className="mt-auto space-y-1">
+        <Link href="/settings" onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${location === '/settings' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/68 hover:bg-sidebar-accent'}`} data-testid="desktop-nav-settings"><Settings size={17} />Settings</Link>
+        <div className="mt-4 flex items-center gap-3 border-t border-sidebar-border px-3 pt-4">
+          <div className="grid h-8 w-8 place-items-center rounded-full bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">{initials}</div>
+          <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{preferences.name}</p><p className="truncate text-[10px] text-sidebar-foreground/45">Saved on this device</p></div>
+          <button type="button" onClick={() => setLocation('/welcome')} className="text-sidebar-foreground/45 hover:text-sidebar-foreground" aria-label="Return to welcome"><LogOut size={15} /></button>
+        </div>
+      </div>
+    </aside>
+    <div className="flex min-w-0 flex-1 flex-col md:pl-[248px]">
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background/90 px-5 backdrop-blur-md md:px-10">
+        <button type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 hover:bg-secondary md:hidden" aria-label="Open navigation"><Menu size={20} /></button>
+        <div className="hidden text-xs text-muted-foreground md:block">AI Study Planner <span className="mx-2 text-border">/</span> {location === '/study-plan' ? 'My Plan' : location.slice(1) || 'Welcome'}</div>
+        <div className="ml-auto flex items-center gap-3"><span className="hidden text-xs text-muted-foreground sm:inline">All changes saved locally</span><span className="h-2 w-2 rounded-full bg-[#397c68]" title="Local storage active" /></div>
+      </header>
+      <main className="page-enter mx-auto w-full max-w-[1440px] flex-1 px-5 py-7 pb-24 md:px-10 md:py-10 md:pb-12">{children}</main>
+      <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t bg-card/95 px-2 py-2 backdrop-blur-md md:hidden"><Navigation mobile onNavigate={() => setMobileOpen(false)} /></nav>
+    </div>
+  </div>;
 }

@@ -33,11 +33,12 @@ Morrow is a responsive, local-first study planner for turning exam syllabi into 
 - The first MVP is local-first: planner state is persisted in browser localStorage and seeded with a realistic exam workspace.
 - Tasks are immutable once a date is checked in; rescheduling creates a new pending task and preserves the historical record.
 - The study plan is generated from a flat manual syllabus format that preserves subject, chapter, and topic hierarchy for a future API migration.
+- The first release is intentionally API-free: syllabus entry, plan generation, reminders, and progress tracking use local rule-based logic only.
 - UI state is kept behind a planner context so the storage implementation can later move to PostgreSQL/Supabase without rewriting page components.
 
 ## Product
 
-Users can create exams, enter syllabus topics, generate a daily plan, record YES/NO/PARTIAL outcomes, lock daily check-ins, reschedule misses without rewriting history, and review progress across dashboard, calendar, and analytics views.
+Users can create exams, build a subject/chapter/topic syllabus, generate a rule-based plan with study and assessment sessions, record YES/NO/PARTIAL outcomes, lock daily check-ins, reschedule misses without rewriting history, and review progress across dashboard, calendar, analytics, and reminders views.
 
 ## User preferences
 
