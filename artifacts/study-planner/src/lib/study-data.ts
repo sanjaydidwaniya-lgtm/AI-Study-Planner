@@ -1,17 +1,25 @@
 export type TaskStatus = 'pending' | 'completed' | 'not_completed' | 'partial';
+export type TaskType = 'STUDY' | 'REVISION' | 'PYQ' | 'MOCK TEST';
+export type StudyTime = 'morning' | 'afternoon' | 'evening' | 'night';
+export type RestDay = 'none' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
 export type Topic = { id: string; name: string; estimatedMinutes: number };
 export type Chapter = { id: string; name: string; topics: Topic[] };
 export type Subject = { id: string; name: string; color: string; chapters: Chapter[] };
-export type Exam = { id: string; name: string; examDate: string; studyStartDate: string; hoursPerDay: number; subjects: Subject[] };
+export type Exam = {
+  id: string; name: string; examDate: string; studyStartDate: string; hoursPerDay: number;
+  preferredStudyTime: StudyTime; weeklyRestDay: RestDay; weakSubjects: string[]; strongSubjects: string[];
+  subjects: Subject[];
+};
 export type Task = {
-  id: string; examId: string; date: string; subjectId: string; subjectName: string;
-  subjectColor: string; topicId: string; topicName: string; plannedMinutes: number; status: TaskStatus;
+  id: string; examId: string; date: string; subjectId: string; subjectName: string; chapterName: string;
+  subjectColor: string; topicId: string; topicName: string; type: TaskType; plannedMinutes: number; status: TaskStatus;
   locked: boolean; sourceTaskId?: string; rescheduledFrom?: string;
 };
 export type DailyCheckIn = { date: string; submittedAt: string; locked: boolean };
+export type Reminder = { id: string; title: string; time: string; days: RestDay[]; enabled: boolean };
 export type Preferences = { name: string; email: string; weekStartsOn: 'monday' | 'sunday'; reminderTime: string; compactMode: boolean };
-export type PlannerState = { exams: Exam[]; tasks: Task[]; checkIns: DailyCheckIn[]; preferences: Preferences; seeded: boolean };
+export type PlannerState = { exams: Exam[]; tasks: Task[]; checkIns: DailyCheckIn[]; preferences: Preferences; reminders: Reminder[]; seeded: boolean; setupComplete: boolean };
 
 export const SUBJECT_COLORS = ['#397c68', '#d29b39', '#c76852', '#4d8495', '#8b6aa9', '#7a8c54'];
 
@@ -40,25 +48,66 @@ export function minutesLabel(minutes: number) {
   return hours ? `${hours}h${remainder ? ` ${remainder}m` : ''}` : `${remainder}m`;
 }
 
+function dayName(date: string): RestDay {
+  return new Intl.DateTimeFormat('en-US', { weekday: 'long' })
+    .format(new Date(`${date}T12:00:00`))
+    .toLowerCase() as RestDay;
+}
+
 export function generatePlan(exam: Exam, existingIdPrefix = 'task') {
   const dates = Array.from({ length: Math.max(1, daysBetween(exam.studyStartDate, exam.examDate)) }, (_, index) => addDays(exam.studyStartDate, index));
-  const topics = exam.subjects.flatMap(subject => subject.chapters.flatMap(chapter => chapter.topics.map(topic => ({
-    subject, chapter, topic,
-  }))));
+  const activeDates = exam.weeklyRestDay === 'none' ? dates : dates.filter(date => dayName(date) !== exam.weeklyRestDay);
+  const usableDates = activeDates.length ? activeDates : dates;
+  const topics = exam.subjects.flatMap(subject => subject.chapters.flatMap(chapter => chapter.topics.map(topic => ({ subject, chapter, topic }))));
   const dailyCapacity = Math.max(30, exam.hoursPerDay * 60);
+  const reservedDates = usableDates.length >= 5 ? usableDates.filter((_, index) => index > 0 && (index + 1) % 6 === 0) : [];
+  const mockDate = usableDates.length >= 8 ? usableDates[usableDates.length - 1] : null;
+  const studyDates = usableDates.filter(date => !reservedDates.includes(date) && date !== mockDate);
+  const allocationDates = studyDates.length ? studyDates : usableDates;
   const generated: Task[] = [];
   let dateIndex = 0;
   let remaining = dailyCapacity;
+
   topics.forEach((item, index) => {
-    if (remaining < 25) { dateIndex = Math.min(dateIndex + 1, dates.length - 1); remaining = dailyCapacity; }
-    const planned = Math.min(item.topic.estimatedMinutes, remaining);
+    const weak = exam.weakSubjects.some(subject => subject.trim().toLowerCase() === item.subject.name.trim().toLowerCase());
+    const strong = exam.strongSubjects.some(subject => subject.trim().toLowerCase() === item.subject.name.trim().toLowerCase());
+    const weightedMinutes = Math.round(item.topic.estimatedMinutes * (weak ? 1.35 : strong ? 0.8 : 1));
+    if (remaining < 25 || (weightedMinutes > remaining && remaining < 40 && dateIndex < allocationDates.length - 1)) {
+      dateIndex = Math.min(dateIndex + 1, allocationDates.length - 1);
+      remaining = dailyCapacity;
+    }
+    const planned = Math.max(25, Math.min(weightedMinutes, remaining));
     generated.push({
-      id: `${existingIdPrefix}-${index + 1}`,
-      examId: exam.id, date: dates[dateIndex], subjectId: item.subject.id, subjectName: item.subject.name, subjectColor: item.subject.color,
-      topicId: item.topic.id, topicName: item.topic.name, plannedMinutes: planned, status: 'pending', locked: false,
+      id: `${existingIdPrefix}-study-${index + 1}`,
+      examId: exam.id, date: allocationDates[dateIndex], subjectId: item.subject.id, subjectName: item.subject.name,
+      chapterName: item.chapter.name, subjectColor: item.subject.color, topicId: item.topic.id, topicName: item.topic.name,
+      type: 'STUDY', plannedMinutes: planned, status: 'pending', locked: false,
     });
     remaining -= planned;
   });
+
+  reservedDates.forEach((date, index) => {
+    const subject = exam.subjects[index % Math.max(1, exam.subjects.length)];
+    const chapter = subject?.chapters[0];
+    const topic = chapter?.topics[0];
+    if (!subject || !chapter || !topic) return;
+    generated.push({
+      id: `${existingIdPrefix}-review-${index + 1}`, examId: exam.id, date, subjectId: subject.id, subjectName: subject.name,
+      chapterName: chapter.name, subjectColor: subject.color, topicId: topic.id, topicName: `${subject.name} cumulative review`,
+      type: index % 2 === 0 ? 'REVISION' : 'PYQ', plannedMinutes: Math.min(60, dailyCapacity), status: 'pending', locked: false,
+    });
+  });
+
+  if (mockDate && exam.subjects.length) {
+    const subject = exam.subjects[0];
+    const chapter = subject.chapters[0];
+    const topic = chapter?.topics[0];
+    if (chapter && topic) generated.push({
+      id: `${existingIdPrefix}-mock-1`, examId: exam.id, date: mockDate, subjectId: subject.id, subjectName: subject.name,
+      chapterName: chapter.name, subjectColor: subject.color, topicId: topic.id, topicName: `${exam.name} mock test`,
+      type: 'MOCK TEST', plannedMinutes: Math.min(90, dailyCapacity), status: 'pending', locked: false,
+    });
+  }
   return generated;
 }
 
@@ -76,7 +125,8 @@ export function createDemoState(): PlannerState {
   const today = isoDate();
   const exam: Exam = {
     id: 'exam-psych-101', name: 'Cognitive Psychology · final', examDate: addDays(today, 29),
-    studyStartDate: addDays(today, -10), hoursPerDay: 2.5,
+    studyStartDate: addDays(today, -10), hoursPerDay: 2.5, preferredStudyTime: 'evening', weeklyRestDay: 'sunday',
+    weakSubjects: ['Neuroscience'], strongSubjects: ['Cognitive psychology'],
     subjects: [
       demoSubject('subject-cog', 'Cognitive psychology', SUBJECT_COLORS[0], [
         ['Memory', 'Working memory', 'Long-term memory', 'Forgetting & interference'],
@@ -109,7 +159,18 @@ export function createDemoState(): PlannerState {
     return task;
   });
   const checkIns = Array.from({ length: 5 }, (_, index) => ({ date: addDays(today, -(index + 1)), submittedAt: new Date().toISOString(), locked: true }));
-  return { exams: [exam], tasks, checkIns, seeded: true, preferences: { name: 'Maya Chen', email: 'maya.chen@campus.edu', weekStartsOn: 'monday', reminderTime: '18:30', compactMode: false } };
+  return {
+    exams: [exam],
+    tasks,
+    checkIns,
+    seeded: true,
+    setupComplete: false,
+    reminders: [
+      { id: 'reminder-1', title: 'Evening focus block', time: '18:30', days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], enabled: true },
+      { id: 'reminder-2', title: 'Weekly review', time: '10:00', days: ['saturday'], enabled: true },
+    ],
+    preferences: { name: 'Maya Chen', email: 'maya.chen@campus.edu', weekStartsOn: 'monday', reminderTime: '18:30', compactMode: false },
+  };
 }
 
 export const STORAGE_KEY = 'study-planner-local-v3';
