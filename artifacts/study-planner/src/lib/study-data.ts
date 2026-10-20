@@ -1,4 +1,5 @@
 export type TaskStatus = 'pending' | 'completed' | 'not_completed' | 'partial';
+export type DailyCheckInResult = 'yes' | 'partial' | 'no';
 export type TaskType = 'STUDY' | 'REVISION' | 'PYQ' | 'MOCK TEST';
 export type StudyTime = 'morning' | 'afternoon' | 'evening' | 'night';
 export type RestDay = 'none' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
@@ -16,7 +17,7 @@ export type Task = {
   subjectColor: string; topicId: string; topicName: string; type: TaskType; plannedMinutes: number; status: TaskStatus;
   locked: boolean; sourceTaskId?: string; rescheduledFrom?: string;
 };
-export type DailyCheckIn = { date: string; submittedAt: string; locked: boolean };
+export type DailyCheckIn = { date: string; submittedAt: string; result: DailyCheckInResult; locked: boolean };
 export type Reminder = { id: string; title: string; time: string; days: RestDay[]; enabled: boolean };
 export type Preferences = { name: string; email: string; weekStartsOn: 'monday' | 'sunday'; reminderTime: string; compactMode: boolean };
 export type PlannerState = { exams: Exam[]; tasks: Task[]; checkIns: DailyCheckIn[]; preferences: Preferences; reminders: Reminder[]; seeded: boolean; setupComplete: boolean };
@@ -158,7 +159,12 @@ export function createDemoState(): PlannerState {
     if (task.date === today) return { ...task, status: index % 4 === 0 ? 'completed' : 'pending' } as Task;
     return task;
   });
-  const checkIns = Array.from({ length: 5 }, (_, index) => ({ date: addDays(today, -(index + 1)), submittedAt: new Date().toISOString(), locked: true }));
+  const checkIns: DailyCheckIn[] = Array.from({ length: 5 }, (_, index) => ({
+    date: addDays(today, -(index + 1)),
+    submittedAt: new Date().toISOString(),
+    result: index === 1 ? 'partial' : index === 3 ? 'no' : 'yes',
+    locked: true,
+  }));
   return {
     exams: [exam],
     tasks,
